@@ -44,3 +44,18 @@ To use the provided Java code for processing and plotting data from log and zip 
 The provided code handles both log and zip files, reads data from them, and dynamically creates and updates charts for each metric. The charts are displayed in a tabbed interface for easy navigation.
 
 Make sure to adjust the `directoryPath` variable in the `main` method to point to your specific directory containing the log and zip files.
+
+**Field description in stats file**
+
+TotalMem - The total amount of memory available to the Java virtual machine
+FreeMem - The amount of unused memory that is currently available to the Java virtual machine
+CurT - The number of system threads currently active
+MaxT - The highest number of system threads that have ever been active concurrently on the server
+SSNs - The number of sessions currently active
+SSNx - The highest number of sessions that were active concurrently on the server
+SSNAvg - The average length of a session lifetime
+REQs - The number of service requests currently executing
+REQx - The maximum number of service requests concurrently executing during the last poll cycle (Default: 1 minute) service requests during the last poll cycle (1 minute)
+REQAvg - The average execution time length for the service requests during the last poll cycle (Default: 1 minute)
+StartReq - The number of service requests that started during the last poll cycle (Default: 1 minute)
+EndReq - The number of service requests that terminated during the last poll cycle (Default: 1 minute) 
