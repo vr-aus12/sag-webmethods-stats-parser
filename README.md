@@ -31,11 +31,13 @@ To use the provided Java code for processing and plotting data from log and zip 
 
    The charts will be displayed in separate tabs based on the metric names. You can switch between tabs to view the charts for different metrics.
 
-7. **Interact with the Charts:**
+   ![Charts](images\chart.jpg)
+
+8. **Interact with the Charts:**
 
    You can interact with the charts as you would with any standard charting application. You can zoom in, zoom out, pan, and save charts as images.
 
-8. **Close the Application:**
+9. **Close the Application:**
 
    Close the application when you are done viewing the charts.
 
