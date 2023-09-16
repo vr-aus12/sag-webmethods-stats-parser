@@ -31,7 +31,7 @@ To use the provided Java code for processing and plotting data from log and zip 
 
    The charts will be displayed in separate tabs based on the metric names. You can switch between tabs to view the charts for different metrics.
 
-   ![Charts](images\chart.jpg)
+   ![Charts](chart.jpg)
 
 8. **Interact with the Charts:**
 
