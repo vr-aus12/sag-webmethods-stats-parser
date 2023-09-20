@@ -17,10 +17,10 @@ To use the provided Java code for processing and plotting data from log and zip 
 
 4. **Update the Directory Path:**
 
-   In the `main` method, update the `directoryPath` variable with the path to the directory where your log and zip files are located. For example:
+   In the `main` method, update the `directoryPath` variable with the path to the directory where your log and zip files are located and startswith string. For example:
 
    ```java
-   MultiFileHexDataGraph chart = new MultiFileHexDataGraph("Performance Metrics", "C:\\path\\to\\your\\files\\");
+   MultiFileHexDataGraph chart = new MultiFileHexDataGraph("Performance Metrics", "C:\\path\\to\\your\\files\\","stats202309");
    ```
 
 5. **Run the Application:**
