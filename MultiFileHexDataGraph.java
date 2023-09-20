@@ -1,22 +1,21 @@
 package test;
 
 import org.jfree.chart.*;
-import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
 import org.jfree.chart.ui.ApplicationFrame;
 import org.jfree.chart.ui.UIUtils;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
-
 import javax.swing.*;
-
 import java.awt.BorderLayout;
 import java.io.*;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.TimeZone;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -24,134 +23,128 @@ import java.util.zip.ZipInputStream;
 public class MultiFileHexDataGraph extends ApplicationFrame {
 
     private final String directoryPath; // Directory containing the files
+    private final Map<String, XYSeries> seriesMap = new HashMap<>();
+    Map<Integer, String> metricNameMap = new HashMap<>();
 
-    public MultiFileHexDataGraph(String title, String directoryPath) {
+
+    public MultiFileHexDataGraph(String title, String directoryPath,String fileStartsWith) {
         super(title);
         this.directoryPath = directoryPath;
-        createChartsForFiles();
-
+        metricNameMap.put(3, "TotalMem");
+        metricNameMap.put(4, "FreeMem");
+        metricNameMap.put(5, "CurT");
+        metricNameMap.put(6, "MaxT");
+        metricNameMap.put(7, "SSNs");
+        metricNameMap.put(8, "SSNx");
+        metricNameMap.put(9, "SSNAvg");
+        metricNameMap.put(10, "REQs");
+        metricNameMap.put(11, "REQx");
+        metricNameMap.put(12, "REQAvg");
+        metricNameMap.put(13, "StartReq");
+        metricNameMap.put(14, "EndReq");
+        createChartsAndTabs(fileStartsWith != null?fileStartsWith:"stats");
     }
 
-    private void createChartsForFiles() {
+    private void createChartsAndTabs(String fileStartsWith) {
+        JTabbedPane tabbedPane = new JTabbedPane(); // Create the tabbed pane here
+
         File directory = new File(directoryPath);
-        File[] files = directory.listFiles();
-        System.out.println("files "+files);
+        FilenameFilter filter = (dir, name) -> name.startsWith(fileStartsWith) && (name.endsWith(".log") || name.endsWith(".zip"));
+        File[] files = directory.listFiles(filter);
 
         if (files != null) {
-            JTabbedPane tabbedPane = new JTabbedPane(); // Create the tabbed pane here
-
             for (File file : files) {
-            	   System.out.println("file "+file);
-                if (file.isFile() && (file.getName().startsWith("stats") && (file.getName().endsWith(".log") || file.getName().endsWith(".zip")))) {
-                    createChartsFromFile(tabbedPane, file); // Pass the tabbedPane to the method
+                if (file.isFile()) {
+                    processFile(file);
                 }
             }
-
-            setContentPane(tabbedPane); // Set the tabbedPane as the content pane
         }
+
+        for (int i=3;i<=14;i++) {
+
+            String metricName = metricNameMap.get(i);
+            XYSeries series = seriesMap.get(metricName);
+            createChartAndTab(tabbedPane, metricName, series);
+        }
+
+        setContentPane(tabbedPane); // Set the tabbedPane as the content pane
     }
 
-    private void createChartsFromFile(JTabbedPane tabbedPane, File file) {
+    private void processFile(File file) {
         try {
             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss z", Locale.ENGLISH);
             dateFormat.setTimeZone(TimeZone.getTimeZone("AEST"));
 
             if (file.getName().endsWith(".log")) {
-                // Read data from a .log file
-                try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-                    // Skip the first line
-                    String line;
-
-                    while ((line = reader.readLine()) != null) {
-                        line = line.trim(); // Remove leading and trailing whitespace
-                        if (line.isEmpty()) {
-                            continue; // Skip empty lines
-                        }
-                        if (line.contains("---( Start )---"))
-                        	continue;
-                        
-                        if (line.contains("TotalMem"))
-                        	continue;
-                        String[] parts = line.split(" ");
-                        Date datetime = dateFormat.parse(parts[0] + " " + parts[1] + " " + parts[2]);
-
-                        for (int dataIndex = 3; dataIndex <= 14; dataIndex++) {
-                            String metricName = getMetricName(dataIndex);
-                            long value = Long.parseLong(parts[dataIndex], 16);
-                            createAndAddChart(tabbedPane, metricName, datetime, value); // Pass the tabbedPane
-                        }
-                    }
-                }
+                processLogFile(file, dateFormat);
             } else if (file.getName().endsWith(".zip")) {
-                // Extract and read data from a .zip file
-                try (ZipInputStream zipInputStream = new ZipInputStream(new FileInputStream(file))) {
-                    ZipEntry zipEntry;
-
-                  if ( (zipEntry = zipInputStream.getNextEntry()) != null){
-                        if (!zipEntry.isDirectory() && zipEntry.getName().endsWith(".log")) {
-                            BufferedReader reader = new BufferedReader(new InputStreamReader(zipInputStream));
-
-                            String line;
-
-                            while ((line = reader.readLine()) != null) {
-                                line = line.trim(); // Remove leading and trailing whitespace
-                                
-                                if (line.isEmpty()) {
-                                    continue; // Skip empty lines
-                                }
-                                if (line.contains("---( Start )---"))
-                                	continue;
-                                
-                                if (line.contains("TotalMem"))
-                                	continue;
-                                
-                                //System.out.println("line "+line);
-                                String[] parts = line.split(" ");
-                                Date datetime = dateFormat.parse(parts[0] + " " + parts[1] + " " + parts[2]);
-
-                                for (int dataIndex = 3; dataIndex <= 14; dataIndex++) {
-                                    String metricName = getMetricName(dataIndex);
-                                    long value = Long.parseLong(parts[dataIndex], 16);
-                                    createAndAddChart(tabbedPane, metricName, datetime, value); // Pass the tabbedPane
-                                }
-                            }
-
-                            reader.close();
-                        }
-                    }
-                }
+                processZipFile(file, dateFormat);
             }
         } catch (IOException | ParseException e) {
             e.printStackTrace();
         }
     }
 
-    private void createAndAddChart(JTabbedPane tabbedPane, String metricName, Date datetime, long value) {
-        // Check if a chart with the same metric name already exists
-        for (int i = 0; i < tabbedPane.getTabCount(); i++) {
-            if (tabbedPane.getTitleAt(i).equals(metricName)) {
-                JPanel chartPanel = (JPanel) tabbedPane.getComponentAt(i);
-                ChartPanel existingChartPanel = (ChartPanel) chartPanel.getComponent(0);
-                JFreeChart existingChart = existingChartPanel.getChart();
-                
-                XYPlot existingPlot = existingChart.getXYPlot();
-                XYSeriesCollection existingDataset = (XYSeriesCollection) existingPlot.getDataset();
-                XYSeries existingSeries = existingDataset.getSeries(0);
+    private void processLogFile(File file, SimpleDateFormat dateFormat) throws IOException, ParseException {
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            // Skip the first line
+            String line;
 
-                existingSeries.add(datetime.getTime(), value);
-               
+            while ((line = reader.readLine()) != null) {
+                line = line.trim(); // Remove leading and trailing whitespace
+                if (line.isEmpty() || line.contains("---( Start )---") || line.contains("TotalMem")) {
+                    continue; // Skip empty lines or lines with undesired content
+                }
+                String[] parts = line.split(" ");
+                Date datetime = dateFormat.parse(parts[0] + " " + parts[1] + " " + parts[2]);
 
-                // Update the chart and exit the method
-                existingChartPanel.repaint();
-                return;
+                for (int dataIndex = 3; dataIndex <= 14; dataIndex++) {
+                    String metricName = metricNameMap.get(dataIndex);
+                    long value = Long.parseLong(parts[dataIndex], 16);
+                    addToSeries(metricName, datetime, value);
+                }
             }
         }
+    }
 
-        // If no chart with the same metric name exists, create a new chart and add it to the tabbed pane
-        XYSeriesCollection dataset = new XYSeriesCollection();
-        XYSeries series = new XYSeries(metricName);
+    private void processZipFile(File file, SimpleDateFormat dateFormat) throws IOException, ParseException {
+        try (ZipInputStream zipInputStream = new ZipInputStream(new FileInputStream(file))) {
+            ZipEntry zipEntry;
+
+            if ( (zipEntry = zipInputStream.getNextEntry()) != null){
+                if (!zipEntry.isDirectory() && zipEntry.getName().endsWith(".log")) {
+                    BufferedReader reader = new BufferedReader(new InputStreamReader(zipInputStream));
+
+                    String line;
+
+                    while ((line = reader.readLine()) != null) {
+                        line = line.trim(); // Remove leading and trailing whitespace
+                        if (line.isEmpty() || line.contains("---( Start )---") || line.contains("TotalMem")) {
+                            continue; // Skip empty lines or lines with undesired content
+                        }
+                        String[] parts = line.split(" ");
+                        Date datetime = dateFormat.parse(parts[0] + " " + parts[1] + " " + parts[2]);
+
+                        for (int dataIndex = 3; dataIndex <= 14; dataIndex++) {
+                            String metricName = metricNameMap.get(dataIndex);
+                            long value = Long.parseLong(parts[dataIndex], 16);
+                            addToSeries(metricName, datetime, value);
+                        }
+                    }
+
+                    reader.close();
+                }
+            }
+        }
+    }
+
+    private void addToSeries(String metricName, Date datetime, long value) {
+        XYSeries series = seriesMap.computeIfAbsent(metricName, k -> new XYSeries(metricName));
         series.add(datetime.getTime(), value);
-        dataset.addSeries(series);
+    }
+
+    private void createChartAndTab(JTabbedPane tabbedPane, String metricName, XYSeries series) {
+        XYSeriesCollection dataset = new XYSeriesCollection(series);
 
         JFreeChart chart = ChartFactory.createTimeSeriesChart(
                 metricName,
@@ -177,38 +170,9 @@ public class MultiFileHexDataGraph extends ApplicationFrame {
     }
 
 
-    private String getMetricName(int dataIndex) {
-        switch (dataIndex) {
-            case 3:
-                return "TotalMem";
-            case 4:
-                return "FreeMem";
-            case 5:
-                return "CurT";
-            case 6:
-                return "MaxT";
-            case 7:
-                return "SSNs";
-            case 8:
-                return "SSNx";
-            case 9:
-                return "SSNAvg";
-            case 10:
-                return "REQs";
-            case 11:
-                return "REQx";
-            case 12:
-                return "REQAvg";
-            case 13:
-                return "StartReq";
-            case 14:
-                return "EndReq";
-            default:
-                return "Unknown";
-        }
-    }
+
     public static void main(String[] args) {
-        MultiFileHexDataGraph chart = new MultiFileHexDataGraph("Performance Metrics", "H:\\stats\\"); // Update the directory path
+        MultiFileHexDataGraph chart = new MultiFileHexDataGraph("Performance Metrics", "H:\\stats\\","stats"); // Update the directory path
         chart.pack();
         UIUtils.centerFrameOnScreen(chart);
         chart.setVisible(true);
